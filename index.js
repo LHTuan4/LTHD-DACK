@@ -46,4 +46,26 @@ apiRoutes.post('/signup', function(req, res) {
     });
   }
 });
+
+apiRoutes.post('/login', function(req, res) {
+  User.findOne({
+    name: req.body.name
+  }, function(err, user) {
+    if (err) throw err;
+ 
+    if (!user) {
+      res.send({success: false, msg: 'User not found.'});
+    } else {
+      user.comparePassword(req.body.password, function (err, isMatch) {
+        if (isMatch && !err) {
+          var token = jwt.encode(user, config.secret);
+          res.json({success: true, token: 'JWT ' + token});
+        } else {
+          res.send({success: false, msg: 'Wrong password.'});
+        }
+      });
+    }
+  });
+});
+
 app.use('/api', apiRoutes);
