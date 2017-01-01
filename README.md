@@ -1,4 +1,5 @@
-# LTHD-DACK
+# Constella
+Experimental airplane ticket booking system.  
+Assignment Project for Modern-Web-Techonologies Class at HCMUS.  
 
-Install bcryptjs: npm install --save bcryptjs
-Go ahead and inside the root of your folder run: npm install
+The goal of the project is to replicate some current airplane tickets booking systems (i.e vietnamairlines, jetstar, vietjet, ...)
