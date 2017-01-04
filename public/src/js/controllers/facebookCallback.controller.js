@@ -1,0 +1,5 @@
+appControllers.controller('facebookCallbackCtrl', [
+    function () {
+
+    }
+]);

@@ -1,7 +1,8 @@
 var app = angular.module('app', ['ui.router', 'ngAnimate', 'ngSanitize', 'appComponents', 'appControllers', 'appServices']);
 
-app.config(['$stateProvider', '$urlRouterProvider',
-  function($stateProvider, $urlRouterProvider) {
+app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
+  function($stateProvider, $urlRouterProvider, $locationProvider) {
+// $locationProvider.html5Mode({enabled: true, requireBase: false});
 
     $urlRouterProvider.otherwise('/');
     $urlRouterProvider.when('/main', '/main/search');
@@ -9,6 +10,11 @@ app.config(['$stateProvider', '$urlRouterProvider',
 
     // An array of state definitions
     var states = [
+      // {
+      //   name: 'facebookcb',
+      //   url: '/api/auth/facebook/callback?code',
+      //   component: 'facebookCallback'
+      // },
       {
         name: 'home',
         url: '/',
@@ -19,7 +25,7 @@ app.config(['$stateProvider', '$urlRouterProvider',
       },
 
       {
-        name: 'review',
+        name: 'main.review',
         url: '/review',
         component: 'review'
       },
@@ -91,6 +97,29 @@ app.config(['$stateProvider', '$urlRouterProvider',
 
 app.run(['$rootScope', '$transitions',
   function($rootScope, $transitions){
+
+    $transitions.onBefore({to: 'home'}, (trans) => {
+      var authService = trans.injector().get('authService');
+      if (authService.isAuthenticated())
+        return trans.router.stateService.target("main");
+      else
+        return true;
+    });
+
+    $transitions.onBefore({to: 'main.**'}, (trans) => {
+      var authService = trans.injector().get('authService');
+      if (authService.isAuthenticated())
+        return true;
+      else
+        return trans.router.stateService.target("home");
+    });
+
+    // $transitions.onBefore({to: 'facebookcb'}, (trans) => {
+    //   var authService = trans.injector().get('authService');
+    //   var urlParams = trans.injector().get('stateParams');
+
+    //   console.log('urlParams', urlParams);
+    // })
 
     $transitions.onStart({}, () => {
       console.log('loading data...');

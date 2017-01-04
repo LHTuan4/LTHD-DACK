@@ -1,7 +1,8 @@
 var app = angular.module('app', ['ui.router', 'ngAnimate', 'ngSanitize', 'appComponents', 'appControllers', 'appServices']);
 
-app.config(['$stateProvider', '$urlRouterProvider',
-  function($stateProvider, $urlRouterProvider) {
+app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
+  function($stateProvider, $urlRouterProvider, $locationProvider) {
+// $locationProvider.html5Mode({enabled: true, requireBase: false});
 
     $urlRouterProvider.otherwise('/');
     $urlRouterProvider.when('/main', '/main/search');
@@ -9,6 +10,11 @@ app.config(['$stateProvider', '$urlRouterProvider',
 
     // An array of state definitions
     var states = [
+      // {
+      //   name: 'facebookcb',
+      //   url: '/api/auth/facebook/callback?code',
+      //   component: 'facebookCallback'
+      // },
       {
         name: 'home',
         url: '/',
@@ -19,7 +25,7 @@ app.config(['$stateProvider', '$urlRouterProvider',
       },
 
       {
-        name: 'review',
+        name: 'main.review',
         url: '/review',
         component: 'review'
       },
@@ -91,6 +97,29 @@ app.config(['$stateProvider', '$urlRouterProvider',
 
 app.run(['$rootScope', '$transitions',
   function($rootScope, $transitions){
+
+    $transitions.onBefore({to: 'home'}, (trans) => {
+      var authService = trans.injector().get('authService');
+      if (authService.isAuthenticated())
+        return trans.router.stateService.target("main");
+      else
+        return true;
+    });
+
+    $transitions.onBefore({to: 'main.**'}, (trans) => {
+      var authService = trans.injector().get('authService');
+      if (authService.isAuthenticated())
+        return true;
+      else
+        return trans.router.stateService.target("home");
+    });
+
+    // $transitions.onBefore({to: 'facebookcb'}, (trans) => {
+    //   var authService = trans.injector().get('authService');
+    //   var urlParams = trans.injector().get('stateParams');
+
+    //   console.log('urlParams', urlParams);
+    // })
 
     $transitions.onStart({}, () => {
       console.log('loading data...');
@@ -297,6 +326,10 @@ appComponents.component('checkout', {
 	templateUrl: '../partials/main/booking/checkout.html',
 	controller: 'checkoutCtrl'
 });
+appComponents.component('facebookCallback', {
+	template: '...',
+	controller: 'facebookCallbackCtrl'
+});
 appComponents.component('flights', {
 	templateUrl: '../partials/main/booking/flights.html',
 	controller: 'flightsCtrl'
@@ -307,6 +340,10 @@ appComponents.component('home', {
 appComponents.component('main', {
 	templateUrl: '../partials/main.html',
 	controller: 'mainCtrl'
+});
+appComponents.component('navBar', {
+	templateUrl: '../partials/navBar.html',
+	controller: 'navBarCtrl'
 });
 appComponents.component('passengers', {
 	templateUrl: '../partials/main/booking/passengers.html',
@@ -324,6 +361,849 @@ appComponents.component('summary', {
 	templateUrl: '../partials/main/booking/summary.html',
 	controller: 'summaryCtrl'
 });
+appControllers.controller('bookingCtrl', ['$scope', '$state', 'testService',
+	function($scope, $state, testService) {
+
+		//--------------------------------------------------------
+		//State status
+		console.log('State:', 'main.booking');
+
+		//--------------------------------------------------------
+		//Inputs Variables
+		
+		//--------------------------------------------------------
+		//Display Data Variables
+
+		//--------------------------------------------------------
+		//Events triggers
+
+
+		//--------------------------------------------------------
+		//Initialize default data
+
+		//--------------------------------------------------------
+		//State Change Command	
+	}
+]);
+appControllers.controller('checkoutCtrl', ['$scope', '$rootScope', '$state', 'bookingService',
+	function($scope, $rootScope, $state, bookingService) {
+
+		//--------------------------------------------------------
+		//State status
+		console.log('State:', 'main.booking.checkout');
+
+		//--------------------------------------------------------
+		//Inputs Variables
+		
+		//--------------------------------------------------------
+		//Display Data Variables
+		$scope.isPaid = false;
+		$scope.message = "Press this magical button to check out";
+		$scope.bookingId = null;	
+
+		//--------------------------------------------------------
+		//Events triggers
+		$scope.checkout = function() {
+			$rootScope.loading = true;
+
+			bookingService.makeBooking((err, result) => {
+
+				if (err) {
+					console.log(err);
+					$scope.message = "You have invalid booking, please fill in all required information";
+					$rootScope.loading = false;
+				}
+				else {
+					$scope.isPaid = true;
+					$scope.message = 'OK, your booking is valid. I paid it for you';
+					$scope.bookingId = result.id;
+					$rootScope.loading = false;
+					$scope.$apply();
+				}
+
+				
+			});
+		};
+
+		$scope.review = function() {
+
+			if ($scope.isPaid && $scope.bookingId) {
+				bookingService.setReviewId($scope.bookingId);
+			}
+
+			$state.go('review');
+		};
+
+		//--------------------------------------------------------
+		//Initialize default data
+		
+
+		//--------------------------------------------------------
+		//State Change Command	
+	}
+]);
+appControllers.controller('facebookCallbackCtrl', [
+    function () {
+
+    }
+]);
+appControllers.controller('flightsCtrl', ['$scope', '$state', 'flightsService', 'locationsService', 'travelClassesService', 'bookingService',
+	function($scope, $state, flightsService, locationsService, travelClassesService, bookingService) {
+
+		//--------------------------------------------------------
+		//State status
+		console.log('State:', 'main.booking.flights');
+
+		//--------------------------------------------------------
+		//Inputs Variables
+		var q = flightsService.getQuery(),
+			b = bookingService.getConfig();
+
+		$scope.forwardFlight = b.forwardRoute.flight;
+		$scope.returnFlight = b.returnRoute.flight;
+
+		//--------------------------------------------------------
+		//Display Data Variables
+		var locations; 
+		$scope.roundTrip = q.roundTrip;
+		$scope.origins = [];
+		$scope.destinations = [];
+		$scope.travelClasses = [];
+
+		$scope.forwardFlights = [];
+		$scope.forwardRouteDescription = '';
+		$scope.returnDescription = '';
+		$scope.returnFlights = [];
+
+		//--------------------------------------------------------
+		//Events triggers
+		$scope.setForwardRoute = function(flight, seatSelection) {
+
+			seatSelection = JSON.parse(seatSelection);
+
+			bookingService.setForwardRoute({
+				flight: flight,
+				class: seatSelection.class
+			});
+
+			$scope.returnFlights.map((f) => {
+				
+				f.valid = f.schedule.departure > flight.schedule.arrival;
+				return f;
+			});
+		};
+
+		$scope.setReturnRoute = function(flight, seatSelection) {
+
+			seatSelection = JSON.parse(seatSelection);
+
+			bookingService.setReturnRoute({
+				flight: flight,
+				class: seatSelection.class
+			});
+
+			$scope.forwardFlights.map((f) => {
+				
+				f.valid = f.schedule.arrival < flight.schedule.arrival;
+				return f;
+			});
+		};
+			
+		$scope.calculatePrice = function(seatSelection) {
+
+			seatSelection = JSON.parse(seatSelection);
+
+			var price = seatSelection.price;
+			var passengers = bookingService.getConfig().passengers,
+				passengersFactor = passengers.adultsCount + passengers.childrenCount*0.75;
+			
+			return Utils.formatCurrency(price * passengersFactor, 'VND');
+		};
+
+		//--------------------------------------------------------
+		//Initialize default data
+		var transformFlights = function(flights, isForward) {
+
+			if (!flights) return [];
+
+			flights = Utils
+				.populate(flights, 'origin')
+				.with($scope.origins)
+				.where((flight, originLocation) => flight._origin === originLocation._id);
+
+			flights = Utils
+				.populate(flights, 'destination')
+				.with($scope.destinations)
+				.where((flight, destinationLocation) => flight._destination === destinationLocation._id);
+
+			flights = flights.map((flight) => {
+				flight.schedule.departure = new Date(flight.schedule.departure);
+				flight.schedule.arrival = new Date(flight.schedule.arrival);
+
+				flight.seats = Utils
+					.populate(flight.seats, 'class')
+					.with($scope.travelClasses)
+					.where((seat, travelClass) => seat._class === travelClass._id);
+
+				flight.valid = true;
+				if ($scope.returnFlight && isForward)
+					flight.valid = $scope.returnFlight.departure? flight.schedule.arrival < $scope.returnFlight.departure : true;
+				else if ($scope.forwardFlight && !isForward)
+					flight.valid = $scope.forwardFlight.arrival? flight.schedule.departure > $scope.forwardFlight.arrival : true;
+
+				return flight;
+			});
+
+
+			return flights;
+		};
+
+		async.waterfall([
+			function(callback) {
+
+				locationsService.getOrigins({}, (err, origins) => {
+					
+					if (err) return callback(err);
+					
+					$scope.origins = origins;
+					callback(null);
+				});
+			},
+			function(callback) {
+
+				locationsService.getDestinations({}, (err, destinations) => {
+
+					if (err) return callback(err);
+
+					$scope.destinations = destinations;
+					callback(null);
+				});
+			},
+			function(callback) {
+
+				travelClassesService.getTravelClasses((err, travelClasses) => {
+
+					if (err) return callback(err);
+
+					$scope.travelClasses = travelClasses;
+					callback(null);
+				});
+			},
+			function(callback) {
+
+				var origin = (q.origin)? $scope.origins.find((loc) => loc._id === q.origin) : null,
+					destination = (q.destination)? $scope.destinations.find((loc) => loc._id === q.destination) : null,
+					departing = (q.departing)? q.departing : null,
+					returning = (q.returning)? q.returning : null;
+				
+				$scope.forwardRouteDescription = Utils.formatRouteDescription(origin, destination, departing);
+				$scope.returnRouteDescription = Utils.formatRouteDescription(destination, origin, returning);
+
+				callback(null);
+			},
+			function(callback) {
+
+				flightsService.getForwardFlights((err, flights) => {
+
+					if (err) return callback(err);
+
+					$scope.forwardFlights = transformFlights(flights);			
+					callback(null);
+				});
+			},
+			function(callback) {
+
+				if (!$scope.roundTrip) return callback(null);
+
+				flightsService.getReturnFlights((err, flights) => {
+
+					if (err) return callback(err);
+
+					$scope.returnFlights = transformFlights(flights);	
+					$scope.$apply();
+					callback(null);
+				});
+			}],
+
+			function(err, result) {
+
+				if (err) console.log(err);	
+			}
+		);
+		
+
+		//--------------------------------------------------------
+		//State Change Command
+		$scope.continue = function() {
+
+			$state.go('main.booking.passengers');
+		};			
+	}
+]);
+appControllers.controller('mainCtrl', ['$scope', '$state',
+	function($scope, $state) {
+
+		//--------------------------------------------------------
+		//State status
+		console.log('State:', 'main');		
+	}
+]);
+appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'authService',
+    function ($scope, $rootScope, $state, authService) {
+
+        $scope.isAuthenticated = authService.isAuthenticated();
+        var refreshLoginState = function () {
+            if ($scope.isAuthenticated) {
+                authService.getAccount((err, result) => {
+                    if (err) return console.error(err);
+                    $scope.username = result.account.email;
+                    $scope.$apply();
+                })
+            }
+        };
+
+        refreshLoginState();
+
+
+        // Preauth
+        $scope.email = '';
+        $scope.password = '';
+
+        $scope.loginLocal = function () {
+            authService.loginLocal($scope.email, $scope.password, (err, token) => {
+                if (err) return console.log(err);
+                $scope.isAuthenticated = true;
+                refreshLoginState();
+                $state.go('main');
+            })
+        }
+
+        // $scope.loginFacebook = function() {
+        //     authService.loginFacebook((err, token) => {
+        //         if (err) return console.log(err);
+        //         $scope.isAuthenticated = true;
+        //         $state.go('main');
+        //     })
+        // }
+
+        // Auth
+        $scope.username = '';
+        $scope.logout = function () {
+            authService.logout((err) => {
+                if (err) return console.error(err);
+                $scope.isAuthenticated = false;
+                refreshLoginState();
+                $state.go('home');
+            });
+        }
+    }
+]);
+appControllers.controller('passengersCtrl', ['$scope', '$state', 'bookingService',
+	function($scope, $state, bookingService){
+
+		//--------------------------------------------------------
+		//State status
+		console.log('State:', "main.booking.passengers");
+
+		//--------------------------------------------------------
+		//Inputs Variables
+		var b = bookingService.getConfig();
+		
+		//--------------------------------------------------------
+		//Display Data Variables
+		$scope.adults = [];
+		$scope.children = [];
+		$scope.infants = [];
+		$scope.contact = {};
+
+		//--------------------------------------------------------
+		//Events triggers
+		$scope.updatePassengers = function() {
+
+			bookingService.updatePassengers({
+				adults: $scope.adults,
+				children: $scope.children,
+				infants: $scope.infants
+			});
+		};
+		$scope.updateContact = function() {
+			bookingService.updateContact($scope.contact);
+		};
+
+
+		//--------------------------------------------------------
+		//Initialize default data
+		b.passengers.adults.forEach((p) => {
+			$scope.adults.push({
+				title: p.title,
+				firstName: p.firstName,
+				lastName: p.lastName,
+				dateOfBirth: p.dateOfBirth? new Date(p.dateOfBirth.getTime()) : null
+			});
+		});
+		b.passengers.children.forEach((p) => {
+			$scope.children.push({
+				title: p.title,
+				firstName: p.firstName,
+				lastName: p.lastName,
+				dateOfBirth: p.dateOfBirth? new Date(p.dateOfBirth.getTime()) : null
+			});
+		});
+		b.passengers.infants.forEach((p) => {
+			$scope.infants.push({
+				title: p.title,
+				firstName: p.firstName,
+				lastName: p.lastName,
+				dateOfBirth: p.dateOfBirth? new Date(p.dateOfBirth.getTime()) : null
+			});
+		});
+		$scope.contact = {
+			title: b.contact.title,
+			firstName: b.contact.firstName,
+			lastName: b.contact.lastName,
+			email: b.contact.email,
+			telephone: b.contact.telephone,
+			address: b.contact.address,
+			region: b.contact.region,
+			note: b.contact.note
+		};
+
+		//--------------------------------------------------------
+		//State Change Command	
+		$scope.next = function() {
+			$state.go('main.booking.checkout');
+		};			
+	}
+]);
+appControllers.controller('reviewCtrl', ['$scope', '$rootScope', '$state', 'bookingService', 'locationsService', 'travelClassesService',
+	function($scope, $rootScope, $state, bookingService, locationsService, travelClassesService) {
+
+		//--------------------------------------------------------
+		//State status
+		console.log('State:', 'review');
+
+		//--------------------------------------------------------
+		//Inputs Variables
+		$scope.hasBooking = false;
+		$scope.bookingId = bookingService.getReviewId();
+		if ($scope.bookingId) $scope.bookingId = JSON.parse(JSON.stringify($scope.bookingId));
+
+		$scope.booking = {
+			passengers: {
+				adults: [],
+				children: [],
+				infants: []
+			},
+			contact: {
+				title: null,
+				firstName: null,
+				lastName: null,
+				email: null,
+				telephone: null,
+				address: null,
+				region: null,
+				note: null
+			},
+			forwardRoute: {
+				flight: null,
+				class: null
+			},
+			returnRoute: {
+				flight: null,
+				class: null
+			},
+			totalPrice: 0
+		};
+		$scope.message = '';
+
+		//--------------------------------------------------------
+		//Display Data Variables
+		$scope.origins = [];
+		$scope.destinations = [];
+		$scope.travelClasses = [];
+		$scope.forwardRoute = $scope.booking.forwardRoute;
+		$scope.returnRoute = $scope.booking.returnRoute;
+		$scope.passengers = $scope.booking.passengers;
+		$scope.contact = $scope.booking.contact;
+
+		//--------------------------------------------------------
+		//Events triggers
+		$scope.searchBooking = function() {
+
+			if (!$scope.bookingId) {
+				$scope.message = 'Please provide an booking id';
+				return;
+			}
+
+			$rootScope.loading = true;
+			bookingService.getBooking($scope.bookingId, (err, result) => {
+
+				if (err) {
+					$scope.message = 'Can\'t find any booking with provided id';	
+					$scope.hasBooking = false;
+					$rootScope.loading = false;	
+					$scope.$apply();
+					return;
+				}
+
+				$scope.booking = transformBooking(result);
+				$scope.forwardRoute = $scope.booking.forwardRoute;
+				$scope.returnRoute = $scope.booking.returnRoute;
+				$scope.passengers = $scope.booking.passengers;
+				$scope.contact = $scope.booking.contact;
+
+				$scope.message = '';
+				$scope.hasBooking = true;
+				$rootScope.loading = false;
+				$scope.$apply();
+			});
+		};
+
+		$scope.formatCurrency = function(price) {
+			if (!price) return 0;
+			return Utils.formatCurrency(price, 'VND');
+		};
+
+		var transformFlight = function(f) {
+
+			if (!f) return;
+
+			f.schedule.departure = new Date(f.schedule.departure);
+			f.schedule.arrival = new Date(f.schedule.arrival);
+			f.origin = $scope.origins.find((o) => o._id === f._origin);
+			delete f._origin;
+			f.destination = $scope.destinations.find((d) => d._id === f._destination);
+			delete f._destination;
+
+			return f;
+		};
+
+		var transformBooking = function(b) {
+
+			if (!b) return;
+
+			b.createdAt = new Date(b.createdAt);
+			b.updatedAt = new Date(b.updatedAt);
+
+			b.forwardRoute.class = b.forwardRoute._class;
+			delete b.forwardRoute._class;
+			b.forwardRoute.flight = b.forwardRoute._flight;
+			delete b.forwardRoute._flight;
+			transformFlight(b.forwardRoute.flight);
+
+			if (b.returnRoute) {
+				b.returnRoute.class = b.returnRoute._class;
+				delete b.returnRoute._class;
+				b.returnRoute.flight = b.returnRoute._flight;
+				delete b.returnRoute._flight;
+
+				transformFlight(b.returnRoute.flight);
+			}
+
+			return b;
+		};
+
+		//--------------------------------------------------------
+		//Initialize default data
+		async.waterfall([
+			function(callback) {
+
+				locationsService.getOrigins({}, (err, origins) => {
+					
+					if (err) return callback(err);
+					
+					$scope.origins = origins;
+					callback(null);
+				});
+			},
+			function(callback) {
+
+				locationsService.getDestinations({}, (err, destinations) => {
+
+					if (err) return callback(err);
+
+					$scope.destinations = destinations;
+					callback(null);
+				});
+			},
+			function(callback) {
+
+				travelClassesService.getTravelClasses((err, travelClasses) => {
+
+					if (err) return callback(err);
+
+					$scope.travelClasses = travelClasses;
+					callback(null);
+				});
+			}],
+			function(err, result) {
+
+				if (err) console.log(err);
+			}
+		);
+		//--------------------------------------------------------
+		//State Change Command	
+	}
+]);
+appControllers.controller('searchCtrl', ['$scope', '$rootScope', '$state', 'locationsService', 'flightsService', 'bookingService',
+	function($scope, $rootScope, $state, locationsService, flightsService, bookingService) {
+		
+		//--------------------------------------------------------
+		//State status
+		console.log('State:', 'main.search');
+
+		//--------------------------------------------------------
+		//Inputs Variables
+		var q = flightsService.getQuery(),
+			b = bookingService.getConfig();
+		$scope.input = {
+			roundTrip: q.roundTrip,
+			origin: q.origin,
+			destination: q.destination,
+			departing: q.departing,
+			returning: q.returning,
+			adults: String(b.passengers.adultsCount),
+			children: String(b.passengers.childrenCount),
+			infants: String(b.passengers.infantsCount),
+			promotion: b.promotion
+		};
+
+		//--------------------------------------------------------
+		//Display Data Variables	
+		$scope.groupedOrigins = {};
+		$scope.groupedDestinations = {};
+		$scope.adultsOptions = [1, 2, 3, 4, 5, 6];
+		$scope.childrenOptions = [0, 1, 2];
+		$scope.infantsOptions = [0, 1];
+		$scope.minDeparture = new Date();
+
+		//--------------------------------------------------------
+		//Events triggers
+		$scope.onAdultsChanged = function() {
+
+			var maxChildren = Math.min($scope.input.adults * 2, 6 - $scope.input.adults),
+				maxInfants = Number($scope.input.adults) + 1;
+
+			$scope.childrenOptions = 	Array.from(Array(maxChildren + 1).keys());
+			$scope.infantsOptions  = 	Array.from(Array(maxInfants).keys());
+		};
+
+		$scope.onOriginChanged = function() {
+			
+			locationsService.getDestinations({from: $scope.input.origin}, (err, destinations) => {
+				if (err) return console.log(err);
+				$scope.groupedDestinations = Utils.groupedTransform(destinations, 'region');
+				$scope.input.destination = null;
+				$scope.$apply();
+			});
+		};
+
+		$scope.onDestinationChanged = function() {
+
+			// locationsService.getOrigins({to: $scope.input.destination}, (err, origins) => {
+			// 	if (err) return console.log(err);
+			// 	$scope.groupedOrigins = Utils.groupedTransform(origins, 'region');
+			// 	$scope.$apply();
+			// });
+		};
+
+		//--------------------------------------------------------
+		//Initialize default data
+		async.parallel([
+			function(callback) {
+				locationsService.getOrigins({}, (err, origins) => {
+					if (err) return callback(err);
+					$scope.groupedOrigins = Utils.groupedTransform(origins, 'region');
+					callback(null);
+				});
+			},
+			function(callback) {
+				locationsService.getDestinations({}, (err, destinations) => {
+					if (err) return callback(err);
+					$scope.groupedDestinations = Utils.groupedTransform(destinations, 'region');
+					callback(null);
+				});
+			}],
+
+			function(err, results) {
+				if (err) console.log(err);
+			}
+		);
+
+	
+		//--------------------------------------------------------
+		//State Change Command
+		$scope.next = function() {
+			
+			flightsService.setQuery({
+				roundTrip: $scope.input.roundTrip,
+				departing: $scope.input.departing,
+				returning: $scope.input.returning,
+				origin: $scope.input.origin,
+				destination: $scope.input.destination
+			});
+
+			bookingService.setBasicConfig({
+				roundTrip: $scope.input.roundTrip,
+				promotion: $scope.input.promotion,
+				passengers: {
+					adultsCount: Number($scope.input.adults),
+					childrenCount: Number($scope.input.children),
+					infantsCount: Number($scope.input.infants)
+				}
+			});
+
+			$state.go('main.booking.flights');
+		};
+	}
+]);
+appControllers.controller('summaryCtrl', ['$scope', '$state', 'bookingService', 'locationsService', 'travelClassesService',
+	function($scope, $state, bookingService, locationsService, travelClassesService) {
+
+		//--------------------------------------------------------
+		//State status
+
+		//--------------------------------------------------------
+		//Inputs Variables
+		var b = bookingService.getConfig();
+
+		//--------------------------------------------------------
+		//Display Data Variables
+		$scope.roundTrip = b.roundTrip;
+		$scope.origins = [];
+		$scope.destinations = [];
+		$scope.travelClasses = [];
+
+		$scope.config = b;
+		$scope.forwardRoute = b.forwardRoute;
+		$scope.returnRoute = b.returnRoute;
+		$scope.passengers = b.passengers;
+		$scope.contact = b.contact;
+
+
+		//--------------------------------------------------------
+		//Events triggers
+		$scope.formatCurrency = function(price) {
+			return Utils.formatCurrency(price, 'VND');
+		};
+
+		//--------------------------------------------------------
+		//Initialize default data
+		async.waterfall([
+			function(callback) {
+
+				locationsService.getOrigins({}, (err, origins) => {
+					
+					if (err) return callback(err);
+					
+					$scope.origins = origins;
+					callback(null);
+				});
+			},
+			function(callback) {
+
+				locationsService.getDestinations({}, (err, destinations) => {
+
+					if (err) return callback(err);
+
+					$scope.destinations = destinations;
+					callback(null);
+				});
+			},
+			function(callback) {
+
+				travelClassesService.getTravelClasses((err, travelClasses) => {
+
+					if (err) return callback(err);
+
+					$scope.travelClasses = travelClasses;
+					callback(null);
+				});
+			}],
+			function(err, result) {
+
+				if (err) console.log(err);
+			}
+		);
+		//--------------------------------------------------------
+		//State Change Command	
+	}
+]);
+appServices.factory('authService', [
+    function () {
+
+        var serviceObj = {
+            isAuthenticated: function() {
+                return localStorage.getItem("token");
+            },
+            loginLocal: function (email, password, callback) {
+
+                var promise = new Promise((fulfill, reject) => {
+                    $.ajax({
+                        url: '/api/auth/local',
+                        method: 'GET',
+                        data: { email: email, password: password },
+                        success: fulfill,
+                        error: reject
+                    });
+                });
+
+                promise
+                    .then((result) => {
+                        localStorage.setItem("token", result.token);
+                        callback(null, result)
+                    })
+                    .catch((xhr, textStatus, errorThrown) => callback(xhr.responseJSON));
+            },
+            loginFacebook: function(done) {
+
+                 var promise = new Promise((fulfill, reject) => {
+                    $.ajax({
+                        url: '/api/auth/facebook',
+                        headers: { 'Access-Control-Allow-Headers': '*' },
+                        method: 'GET',
+                        success: fulfill,
+                        error: reject
+                    });
+                });
+
+                promise
+                    .then((result) => {
+                        localStorage.setItem("token", result.token);
+                        console.log("DMM", result);
+                        callback(null, result)
+                    })
+                    .catch((xhr, textStatus, errorThrown) => callback(xhr.responseJSON));
+
+            },
+            logout: function(done) {
+                localStorage.removeItem("token");
+                done();
+            },
+            getAccount: function(done) {
+
+                var token = this.isAuthenticated();
+                if (!token) return done('unauthenticated');
+
+                var promise = new Promise((fulfill, reject) => {
+                    $.ajax({
+                        url: '/api/auth/self',
+                        method: 'GET',
+                        headers: { access_token: token },
+                        success: fulfill,
+                        error: reject
+                    });
+                });
+
+                promise
+                    .then((result) => done(null, result))
+                    .catch((xhr, textStatus, errorThrown) => done(xhr.responseJSON));
+            }
+        };
+
+        return serviceObj;
+    }
+]);
 appServices.factory('bookingService', ['validateService',
 	function(validateService) {
 
@@ -956,718 +1836,5 @@ appServices.factory('validateService', [
 		};
 
 		return service;
-	}
-]);
-appControllers.controller('bookingCtrl', ['$scope', '$state', 'testService',
-	function($scope, $state, testService) {
-
-		//--------------------------------------------------------
-		//State status
-		console.log('State:', 'main.booking');
-
-		//--------------------------------------------------------
-		//Inputs Variables
-		
-		//--------------------------------------------------------
-		//Display Data Variables
-
-		//--------------------------------------------------------
-		//Events triggers
-
-
-		//--------------------------------------------------------
-		//Initialize default data
-
-		//--------------------------------------------------------
-		//State Change Command	
-	}
-]);
-appControllers.controller('checkoutCtrl', ['$scope', '$rootScope', '$state', 'bookingService',
-	function($scope, $rootScope, $state, bookingService) {
-
-		//--------------------------------------------------------
-		//State status
-		console.log('State:', 'main.booking.checkout');
-
-		//--------------------------------------------------------
-		//Inputs Variables
-		
-		//--------------------------------------------------------
-		//Display Data Variables
-		$scope.isPaid = false;
-		$scope.message = "Press this magical button to check out";
-		$scope.bookingId = null;	
-
-		//--------------------------------------------------------
-		//Events triggers
-		$scope.checkout = function() {
-			$rootScope.loading = true;
-
-			bookingService.makeBooking((err, result) => {
-
-				if (err) {
-					console.log(err);
-					$scope.message = "You have invalid booking, please fill in all required information";
-					$rootScope.loading = false;
-				}
-				else {
-					$scope.isPaid = true;
-					$scope.message = 'OK, your booking is valid. I paid it for you';
-					$scope.bookingId = result.id;
-					$rootScope.loading = false;
-					$scope.$apply();
-				}
-
-				
-			});
-		};
-
-		$scope.review = function() {
-
-			if ($scope.isPaid && $scope.bookingId) {
-				bookingService.setReviewId($scope.bookingId);
-			}
-
-			$state.go('review');
-		};
-
-		//--------------------------------------------------------
-		//Initialize default data
-		
-
-		//--------------------------------------------------------
-		//State Change Command	
-	}
-]);
-appControllers.controller('flightsCtrl', ['$scope', '$state', 'flightsService', 'locationsService', 'travelClassesService', 'bookingService',
-	function($scope, $state, flightsService, locationsService, travelClassesService, bookingService) {
-
-		//--------------------------------------------------------
-		//State status
-		console.log('State:', 'main.booking.flights');
-
-		//--------------------------------------------------------
-		//Inputs Variables
-		var q = flightsService.getQuery(),
-			b = bookingService.getConfig();
-
-		$scope.forwardFlight = b.forwardRoute.flight;
-		$scope.returnFlight = b.returnRoute.flight;
-
-		//--------------------------------------------------------
-		//Display Data Variables
-		var locations; 
-		$scope.roundTrip = q.roundTrip;
-		$scope.origins = [];
-		$scope.destinations = [];
-		$scope.travelClasses = [];
-
-		$scope.forwardFlights = [];
-		$scope.forwardRouteDescription = '';
-		$scope.returnDescription = '';
-		$scope.returnFlights = [];
-
-		//--------------------------------------------------------
-		//Events triggers
-		$scope.setForwardRoute = function(flight, seatSelection) {
-
-			seatSelection = JSON.parse(seatSelection);
-
-			bookingService.setForwardRoute({
-				flight: flight,
-				class: seatSelection.class
-			});
-
-			$scope.returnFlights.map((f) => {
-				
-				f.valid = f.schedule.departure > flight.schedule.arrival;
-				return f;
-			});
-		};
-
-		$scope.setReturnRoute = function(flight, seatSelection) {
-
-			seatSelection = JSON.parse(seatSelection);
-
-			bookingService.setReturnRoute({
-				flight: flight,
-				class: seatSelection.class
-			});
-
-			$scope.forwardFlights.map((f) => {
-				
-				f.valid = f.schedule.arrival < flight.schedule.arrival;
-				return f;
-			});
-		};
-			
-		$scope.calculatePrice = function(seatSelection) {
-
-			seatSelection = JSON.parse(seatSelection);
-
-			var price = seatSelection.price;
-			var passengers = bookingService.getConfig().passengers,
-				passengersFactor = passengers.adultsCount + passengers.childrenCount*0.75;
-			
-			return Utils.formatCurrency(price * passengersFactor, 'VND');
-		};
-
-		//--------------------------------------------------------
-		//Initialize default data
-		var transformFlights = function(flights, isForward) {
-
-			if (!flights) return [];
-
-			flights = Utils
-				.populate(flights, 'origin')
-				.with($scope.origins)
-				.where((flight, originLocation) => flight._origin === originLocation._id);
-
-			flights = Utils
-				.populate(flights, 'destination')
-				.with($scope.destinations)
-				.where((flight, destinationLocation) => flight._destination === destinationLocation._id);
-
-			flights = flights.map((flight) => {
-				flight.schedule.departure = new Date(flight.schedule.departure);
-				flight.schedule.arrival = new Date(flight.schedule.arrival);
-
-				flight.seats = Utils
-					.populate(flight.seats, 'class')
-					.with($scope.travelClasses)
-					.where((seat, travelClass) => seat._class === travelClass._id);
-
-				flight.valid = true;
-				if ($scope.returnFlight && isForward)
-					flight.valid = $scope.returnFlight.departure? flight.schedule.arrival < $scope.returnFlight.departure : true;
-				else if ($scope.forwardFlight && !isForward)
-					flight.valid = $scope.forwardFlight.arrival? flight.schedule.departure > $scope.forwardFlight.arrival : true;
-
-				return flight;
-			});
-
-
-			return flights;
-		};
-
-		async.waterfall([
-			function(callback) {
-
-				locationsService.getOrigins({}, (err, origins) => {
-					
-					if (err) return callback(err);
-					
-					$scope.origins = origins;
-					callback(null);
-				});
-			},
-			function(callback) {
-
-				locationsService.getDestinations({}, (err, destinations) => {
-
-					if (err) return callback(err);
-
-					$scope.destinations = destinations;
-					callback(null);
-				});
-			},
-			function(callback) {
-
-				travelClassesService.getTravelClasses((err, travelClasses) => {
-
-					if (err) return callback(err);
-
-					$scope.travelClasses = travelClasses;
-					callback(null);
-				});
-			},
-			function(callback) {
-
-				var origin = (q.origin)? $scope.origins.find((loc) => loc._id === q.origin) : null,
-					destination = (q.destination)? $scope.destinations.find((loc) => loc._id === q.destination) : null,
-					departing = (q.departing)? q.departing : null,
-					returning = (q.returning)? q.returning : null;
-				
-				$scope.forwardRouteDescription = Utils.formatRouteDescription(origin, destination, departing);
-				$scope.returnRouteDescription = Utils.formatRouteDescription(destination, origin, returning);
-
-				callback(null);
-			},
-			function(callback) {
-
-				flightsService.getForwardFlights((err, flights) => {
-
-					if (err) return callback(err);
-
-					$scope.forwardFlights = transformFlights(flights);			
-					callback(null);
-				});
-			},
-			function(callback) {
-
-				if (!$scope.roundTrip) return callback(null);
-
-				flightsService.getReturnFlights((err, flights) => {
-
-					if (err) return callback(err);
-
-					$scope.returnFlights = transformFlights(flights);	
-					$scope.$apply();
-					callback(null);
-				});
-			}],
-
-			function(err, result) {
-
-				if (err) console.log(err);	
-			}
-		);
-		
-
-		//--------------------------------------------------------
-		//State Change Command
-		$scope.continue = function() {
-
-			$state.go('main.booking.passengers');
-		};			
-	}
-]);
-appControllers.controller('mainCtrl', ['$scope', '$state',
-	function($scope, $state) {
-
-		//--------------------------------------------------------
-		//State status
-		console.log('State:', 'main');		
-	}
-]);
-appControllers.controller('passengersCtrl', ['$scope', '$state', 'bookingService',
-	function($scope, $state, bookingService){
-
-		//--------------------------------------------------------
-		//State status
-		console.log('State:', "main.booking.passengers");
-
-		//--------------------------------------------------------
-		//Inputs Variables
-		var b = bookingService.getConfig();
-		
-		//--------------------------------------------------------
-		//Display Data Variables
-		$scope.adults = [];
-		$scope.children = [];
-		$scope.infants = [];
-		$scope.contact = {};
-
-		//--------------------------------------------------------
-		//Events triggers
-		$scope.updatePassengers = function() {
-
-			bookingService.updatePassengers({
-				adults: $scope.adults,
-				children: $scope.children,
-				infants: $scope.infants
-			});
-		};
-		$scope.updateContact = function() {
-			bookingService.updateContact($scope.contact);
-		};
-
-
-		//--------------------------------------------------------
-		//Initialize default data
-		b.passengers.adults.forEach((p) => {
-			$scope.adults.push({
-				title: p.title,
-				firstName: p.firstName,
-				lastName: p.lastName,
-				dateOfBirth: p.dateOfBirth? new Date(p.dateOfBirth.getTime()) : null
-			});
-		});
-		b.passengers.children.forEach((p) => {
-			$scope.children.push({
-				title: p.title,
-				firstName: p.firstName,
-				lastName: p.lastName,
-				dateOfBirth: p.dateOfBirth? new Date(p.dateOfBirth.getTime()) : null
-			});
-		});
-		b.passengers.infants.forEach((p) => {
-			$scope.infants.push({
-				title: p.title,
-				firstName: p.firstName,
-				lastName: p.lastName,
-				dateOfBirth: p.dateOfBirth? new Date(p.dateOfBirth.getTime()) : null
-			});
-		});
-		$scope.contact = {
-			title: b.contact.title,
-			firstName: b.contact.firstName,
-			lastName: b.contact.lastName,
-			email: b.contact.email,
-			telephone: b.contact.telephone,
-			address: b.contact.address,
-			region: b.contact.region,
-			note: b.contact.note
-		};
-
-		//--------------------------------------------------------
-		//State Change Command	
-		$scope.next = function() {
-			$state.go('main.booking.checkout');
-		};			
-	}
-]);
-appControllers.controller('reviewCtrl', ['$scope', '$rootScope', '$state', 'bookingService', 'locationsService', 'travelClassesService',
-	function($scope, $rootScope, $state, bookingService, locationsService, travelClassesService) {
-
-		//--------------------------------------------------------
-		//State status
-		console.log('State:', 'review');
-
-		//--------------------------------------------------------
-		//Inputs Variables
-		$scope.hasBooking = false;
-		$scope.bookingId = bookingService.getReviewId();
-		if ($scope.bookingId) $scope.bookingId = JSON.parse(JSON.stringify($scope.bookingId));
-
-		$scope.booking = {
-			passengers: {
-				adults: [],
-				children: [],
-				infants: []
-			},
-			contact: {
-				title: null,
-				firstName: null,
-				lastName: null,
-				email: null,
-				telephone: null,
-				address: null,
-				region: null,
-				note: null
-			},
-			forwardRoute: {
-				flight: null,
-				class: null
-			},
-			returnRoute: {
-				flight: null,
-				class: null
-			},
-			totalPrice: 0
-		};
-		$scope.message = '';
-
-		//--------------------------------------------------------
-		//Display Data Variables
-		$scope.origins = [];
-		$scope.destinations = [];
-		$scope.travelClasses = [];
-		$scope.forwardRoute = $scope.booking.forwardRoute;
-		$scope.returnRoute = $scope.booking.returnRoute;
-		$scope.passengers = $scope.booking.passengers;
-		$scope.contact = $scope.booking.contact;
-
-		//--------------------------------------------------------
-		//Events triggers
-		$scope.searchBooking = function() {
-
-			if (!$scope.bookingId) {
-				$scope.message = 'Please provide an booking id';
-				return;
-			}
-
-			$rootScope.loading = true;
-			bookingService.getBooking($scope.bookingId, (err, result) => {
-
-				if (err) {
-					$scope.message = 'Can\'t find any booking with provided id';	
-					$scope.hasBooking = false;
-					$rootScope.loading = false;	
-					$scope.$apply();
-					return;
-				}
-
-				$scope.booking = transformBooking(result);
-				$scope.forwardRoute = $scope.booking.forwardRoute;
-				$scope.returnRoute = $scope.booking.returnRoute;
-				$scope.passengers = $scope.booking.passengers;
-				$scope.contact = $scope.booking.contact;
-
-				$scope.message = '';
-				$scope.hasBooking = true;
-				$rootScope.loading = false;
-				$scope.$apply();
-			});
-		};
-
-		$scope.formatCurrency = function(price) {
-			if (!price) return 0;
-			return Utils.formatCurrency(price, 'VND');
-		};
-
-		var transformFlight = function(f) {
-
-			if (!f) return;
-
-			f.schedule.departure = new Date(f.schedule.departure);
-			f.schedule.arrival = new Date(f.schedule.arrival);
-			f.origin = $scope.origins.find((o) => o._id === f._origin);
-			delete f._origin;
-			f.destination = $scope.destinations.find((d) => d._id === f._destination);
-			delete f._destination;
-
-			return f;
-		};
-
-		var transformBooking = function(b) {
-
-			if (!b) return;
-
-			b.createdAt = new Date(b.createdAt);
-			b.updatedAt = new Date(b.updatedAt);
-
-			b.forwardRoute.class = b.forwardRoute._class;
-			delete b.forwardRoute._class;
-			b.forwardRoute.flight = b.forwardRoute._flight;
-			delete b.forwardRoute._flight;
-			transformFlight(b.forwardRoute.flight);
-
-			if (b.returnRoute) {
-				b.returnRoute.class = b.returnRoute._class;
-				delete b.returnRoute._class;
-				b.returnRoute.flight = b.returnRoute._flight;
-				delete b.returnRoute._flight;
-
-				transformFlight(b.returnRoute.flight);
-			}
-
-			return b;
-		};
-
-		//--------------------------------------------------------
-		//Initialize default data
-		async.waterfall([
-			function(callback) {
-
-				locationsService.getOrigins({}, (err, origins) => {
-					
-					if (err) return callback(err);
-					
-					$scope.origins = origins;
-					callback(null);
-				});
-			},
-			function(callback) {
-
-				locationsService.getDestinations({}, (err, destinations) => {
-
-					if (err) return callback(err);
-
-					$scope.destinations = destinations;
-					callback(null);
-				});
-			},
-			function(callback) {
-
-				travelClassesService.getTravelClasses((err, travelClasses) => {
-
-					if (err) return callback(err);
-
-					$scope.travelClasses = travelClasses;
-					callback(null);
-				});
-			}],
-			function(err, result) {
-
-				if (err) console.log(err);
-			}
-		);
-		//--------------------------------------------------------
-		//State Change Command	
-	}
-]);
-appControllers.controller('searchCtrl', ['$scope', '$rootScope', '$state', 'locationsService', 'flightsService', 'bookingService',
-	function($scope, $rootScope, $state, locationsService, flightsService, bookingService) {
-		
-		//--------------------------------------------------------
-		//State status
-		console.log('State:', 'main.search');
-
-		//--------------------------------------------------------
-		//Inputs Variables
-		var q = flightsService.getQuery(),
-			b = bookingService.getConfig();
-		$scope.input = {
-			roundTrip: q.roundTrip,
-			origin: q.origin,
-			destination: q.destination,
-			departing: q.departing,
-			returning: q.returning,
-			adults: String(b.passengers.adultsCount),
-			children: String(b.passengers.childrenCount),
-			infants: String(b.passengers.infantsCount),
-			promotion: b.promotion
-		};
-
-		//--------------------------------------------------------
-		//Display Data Variables	
-		$scope.groupedOrigins = {};
-		$scope.groupedDestinations = {};
-		$scope.adultsOptions = [1, 2, 3, 4, 5, 6];
-		$scope.childrenOptions = [0, 1, 2];
-		$scope.infantsOptions = [0, 1];
-		$scope.minDeparture = new Date();
-
-		//--------------------------------------------------------
-		//Events triggers
-		$scope.onAdultsChanged = function() {
-
-			var maxChildren = Math.min($scope.input.adults * 2, 6 - $scope.input.adults),
-				maxInfants = Number($scope.input.adults) + 1;
-
-			$scope.childrenOptions = 	Array.from(Array(maxChildren + 1).keys());
-			$scope.infantsOptions  = 	Array.from(Array(maxInfants).keys());
-		};
-
-		$scope.onOriginChanged = function() {
-			
-			locationsService.getDestinations({from: $scope.input.origin}, (err, destinations) => {
-				if (err) return console.log(err);
-				$scope.groupedDestinations = Utils.groupedTransform(destinations, 'region');
-				$scope.input.destination = null;
-				$scope.$apply();
-			});
-		};
-
-		$scope.onDestinationChanged = function() {
-
-			// locationsService.getOrigins({to: $scope.input.destination}, (err, origins) => {
-			// 	if (err) return console.log(err);
-			// 	$scope.groupedOrigins = Utils.groupedTransform(origins, 'region');
-			// 	$scope.$apply();
-			// });
-		};
-
-		//--------------------------------------------------------
-		//Initialize default data
-		async.parallel([
-			function(callback) {
-				locationsService.getOrigins({}, (err, origins) => {
-					if (err) return callback(err);
-					$scope.groupedOrigins = Utils.groupedTransform(origins, 'region');
-					callback(null);
-				});
-			},
-			function(callback) {
-				locationsService.getDestinations({}, (err, destinations) => {
-					if (err) return callback(err);
-					$scope.groupedDestinations = Utils.groupedTransform(destinations, 'region');
-					callback(null);
-				});
-			}],
-
-			function(err, results) {
-				if (err) console.log(err);
-			}
-		);
-
-	
-		//--------------------------------------------------------
-		//State Change Command
-		$scope.next = function() {
-			
-			flightsService.setQuery({
-				roundTrip: $scope.input.roundTrip,
-				departing: $scope.input.departing,
-				returning: $scope.input.returning,
-				origin: $scope.input.origin,
-				destination: $scope.input.destination
-			});
-
-			bookingService.setBasicConfig({
-				roundTrip: $scope.input.roundTrip,
-				promotion: $scope.input.promotion,
-				passengers: {
-					adultsCount: Number($scope.input.adults),
-					childrenCount: Number($scope.input.children),
-					infantsCount: Number($scope.input.infants)
-				}
-			});
-
-			$state.go('main.booking.flights');
-		};
-	}
-]);
-appControllers.controller('summaryCtrl', ['$scope', '$state', 'bookingService', 'locationsService', 'travelClassesService',
-	function($scope, $state, bookingService, locationsService, travelClassesService) {
-
-		//--------------------------------------------------------
-		//State status
-
-		//--------------------------------------------------------
-		//Inputs Variables
-		var b = bookingService.getConfig();
-
-		//--------------------------------------------------------
-		//Display Data Variables
-		$scope.roundTrip = b.roundTrip;
-		$scope.origins = [];
-		$scope.destinations = [];
-		$scope.travelClasses = [];
-
-		$scope.config = b;
-		$scope.forwardRoute = b.forwardRoute;
-		$scope.returnRoute = b.returnRoute;
-		$scope.passengers = b.passengers;
-		$scope.contact = b.contact;
-
-
-		//--------------------------------------------------------
-		//Events triggers
-		$scope.formatCurrency = function(price) {
-			return Utils.formatCurrency(price, 'VND');
-		};
-
-		//--------------------------------------------------------
-		//Initialize default data
-		async.waterfall([
-			function(callback) {
-
-				locationsService.getOrigins({}, (err, origins) => {
-					
-					if (err) return callback(err);
-					
-					$scope.origins = origins;
-					callback(null);
-				});
-			},
-			function(callback) {
-
-				locationsService.getDestinations({}, (err, destinations) => {
-
-					if (err) return callback(err);
-
-					$scope.destinations = destinations;
-					callback(null);
-				});
-			},
-			function(callback) {
-
-				travelClassesService.getTravelClasses((err, travelClasses) => {
-
-					if (err) return callback(err);
-
-					$scope.travelClasses = travelClasses;
-					callback(null);
-				});
-			}],
-			function(err, result) {
-
-				if (err) console.log(err);
-			}
-		);
-		//--------------------------------------------------------
-		//State Change Command	
 	}
 ]);

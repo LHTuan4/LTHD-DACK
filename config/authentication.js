@@ -41,7 +41,7 @@ var LocalStrategy = require('passport-local').Strategy;
 
 passport.use('local', new LocalStrategy({
         usernameField: 'email',
-        passwordField: 'field'
+        passwordField: 'password'
     },
     function(email, password, done) {
         Account
@@ -60,7 +60,7 @@ passport.use('local', new LocalStrategy({
 var JwtStrategy = require('passport-jwt').Strategy;
 var ExtractJwt = require('passport-jwt').ExtractJwt;
 var jwtConfigs = {
-    jwtFromRequest: ExtractJwt.fromAuthHeader(),
+    jwtFromRequest: ExtractJwt.fromHeader('access_token'),
     secretOrKey: '123456',
     algorithms: ['HS256']
 };
