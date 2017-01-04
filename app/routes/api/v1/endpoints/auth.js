@@ -15,6 +15,7 @@ authsRouter.get('/facebook/callback', function(req, res, next) {
         
         var token = jwt.sign({ _id: account._id }, auth.jwtConfigs.secretOrKey, { algorithm: auth.jwtConfigs.algorithms[0] });
         res.status(200).json({token: token});
+   
 
   })(req, res, next);
 });
