@@ -46,5 +46,8 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
                 $state.go('home');
             });
         }
+        $scope.register = function () {
+            $state.go('register');
+        }
     }
 ]);

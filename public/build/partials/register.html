@@ -1,0 +1,39 @@
+<div class="container">
+    <div class="row">
+        <div class="col-md-6 col-md-offset-3">
+            <div class="panel panel-primary">
+                <div class="panel-heading">Thank you for Sign Up!</div>
+                <div class="panel-body">
+                    <form role="form" accept-charset="UTF-8">
+                    
+                        <label for="fname">First Name</label>
+                        <input  ng-model="firstName" type="text" id="fname" class="form-control" name="fname" placeholder="Example: John" required>
+                        
+                        <label for="lname">Last Name</label>
+                        <input required ng-model="lastName" type="text" id="lname" class="form-control" name="lname" placeholder="Example: Smith" required>
+                        
+                        
+                        <label for="gender" class="m-t-10">Your Gender</label>
+                        <select ng-model="gender" id="gender" class="form-control" name="gender" required>
+                            <option value="unknown">Unknown</option>
+                            <option value="alabama">Female</option>
+                            <option value="alaska">Male</option>
+                        </select>
+                        
+                        <label for="emailaddr" class="m-t-10">Email Address</label>
+                        <input ng-model="email" type="email" id="emailaddr" class="form-control" name="email" placeholder="Example: john.smith@gmail.com" required>
+                        
+                        <label for="password" class="m-t-10">Password</label>
+                        <input ng-model="password" type="password" id="password" class="form-control" name="password" placeholder="" required>
+                        
+                        <label for="verifypass" class="m-t-10">Verify Password</label>
+                        <input type="password" id="confirmpass" class="form-control" name="verifypass" placeholder="" required>
+                        <ul></ul>
+                        <center><input ng-click="signUp()" type="submit" class="btn btn-primary m-t-10" id="submitbtn"></center>
+                        
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

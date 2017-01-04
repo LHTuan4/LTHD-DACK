@@ -23,6 +23,14 @@ app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
           'longLoading': (testService) => testService.loadingPromise(300), //Test loading
         }
       },
+      {
+        name: 'register',
+        url: '/register',
+        component: 'register',
+        resolve: {
+          'longLoading': (testService) => testService.loadingPromise(300), //Test loading
+        }
+      },
 
       {
         name: 'main.review',

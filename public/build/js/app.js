@@ -23,6 +23,14 @@ app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
           'longLoading': (testService) => testService.loadingPromise(300), //Test loading
         }
       },
+      {
+        name: 'register',
+        url: '/register',
+        component: 'register',
+        resolve: {
+          'longLoading': (testService) => testService.loadingPromise(300), //Test loading
+        }
+      },
 
       {
         name: 'main.review',
@@ -348,6 +356,10 @@ appComponents.component('navBar', {
 appComponents.component('passengers', {
 	templateUrl: '../partials/main/booking/passengers.html',
 	controller: 'passengersCtrl'
+});
+appComponents.component('register', {
+	templateUrl: '../partials/register.html',
+	controller: 'registerCtrl'
 });
 appComponents.component('review', {
 	templateUrl: '../partials/review.html',
@@ -696,6 +708,9 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
                 $state.go('home');
             });
         }
+        $scope.register = function () {
+            $state.go('register');
+        }
     }
 ]);
 appControllers.controller('passengersCtrl', ['$scope', '$state', 'bookingService',
@@ -774,6 +789,25 @@ appControllers.controller('passengersCtrl', ['$scope', '$state', 'bookingService
 			$state.go('main.booking.checkout');
 		};			
 	}
+]);
+appControllers.controller('registerCtrl', ["$scope", 
+    function($scope) {
+        $scope.firstName = '';
+        $scope.lastName = '';
+        $scope.gender = '';
+        $scope.email = '';
+        $scope.password = '';
+        $scope.signUp = function () {
+            $.ajax("http://127.0.0.1:1337/api/auth/register",{
+            method: "POST",
+            data: {
+                name: $scope.firstName + ' ' + $scope.lastName,
+                email: $scope.email,
+                password: $scope.password
+            },
+        })
+        }
+    }
 ]);
 appControllers.controller('reviewCtrl', ['$scope', '$rootScope', '$state', 'bookingService', 'locationsService', 'travelClassesService',
 	function($scope, $rootScope, $state, bookingService, locationsService, travelClassesService) {
