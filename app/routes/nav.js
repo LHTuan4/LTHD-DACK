@@ -4,11 +4,12 @@ var passport = require('passport');
 //------------------------------------------------------------------------
 var navRouter = express.Router();
 
-navRouter.get('/', function(req, res) {
-	res.redirect('/index.html');
+navRouter.use(function(req, res) {
+	res.sendFile(Utils.root_path + '/public/build/index.html');
 });
 
-navRouter.get('/protectedData',
+navRouter.get('/protectedData', (req, res, next) => {
+	
 	passport.authenticate('jwt', {
 		failureRedirect: '/',
 		// successRedirect: '/blablah'
@@ -17,7 +18,8 @@ navRouter.get('/protectedData',
 	(req, res) => {
 		res.end('important data');
 	}
-);
+});
+
 
 //------------------------------------------------------------------------
 module.exports = navRouter;

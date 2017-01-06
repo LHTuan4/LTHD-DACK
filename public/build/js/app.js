@@ -2,19 +2,21 @@ var app = angular.module('app', ['ui.router', 'ngAnimate', 'ngSanitize', 'appCom
 
 app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
   function($stateProvider, $urlRouterProvider, $locationProvider) {
-// $locationProvider.html5Mode({enabled: true, requireBase: false});
-
+    
+    
+    $locationProvider.html5Mode({enabled: true});
     $urlRouterProvider.otherwise('/');
-    $urlRouterProvider.when('/main', '/main/search');
-    $urlRouterProvider.when('/main/booking', '/main/booking/flights');
 
     // An array of state definitions
     var states = [
-      // {
-      //   name: 'facebookcb',
-      //   url: '/api/auth/facebook/callback?code',
-      //   component: 'facebookCallback'
-      // },
+      {
+        name: 'facebookcb',
+        url: '/facebook/callback?code',
+        component: 'facebookCallback',
+        params: {
+          code: null
+        }
+      },
       {
         name: 'home',
         url: '/',
@@ -33,19 +35,20 @@ app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
       },
 
       {
-        name: 'main.review',
-        url: '/review',
-        component: 'review'
-      },
-      
-      {
         name: 'main',
         component: 'main',
         url: '/main',
+        defaultSubstate: 'main.search',
         resolve: {
           'originsData': (locationsService) => locationsService.getOriginsPromise(),
           'destinationsData': (locationsService) => locationsService.getDestinationsPromise()
         }
+      },
+
+      {
+        name: 'main.review',
+        url: '/review',
+        component: 'review'
       },
 
       {
@@ -61,6 +64,7 @@ app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
         name: 'main.booking',
         component: 'booking',
         url: '/booking',
+        defaultSubstate: 'main.booking.flights',
         resolve: {
           'forwardRouteData': (flightsService) => flightsService.getForwardRoutePromise(),
           'returnRouteData': (flightsService) => flightsService.getReturnRoutePromise(),
@@ -129,11 +133,16 @@ app.run(['$rootScope', '$transitions',
     //   console.log('urlParams', urlParams);
     // })
 
+    $transitions.onBefore({ to: (state) => state.defaultSubstate != null }, (trans) => {
+      var substate = trans.to().defaultSubstate;
+      return trans.router.stateService.target(substate);
+    });
+
     $transitions.onStart({}, () => {
       console.log('loading data...');
       $rootScope.loading = true;
     });
-    $transitions.onSuccess({}, () => {
+    $transitions.onSuccess({ to: (s) => s.name !== 'facebookcb'}, () => {
       console.log('loading success');
       $rootScope.loading = false;
       $("html, body").animate({ scrollTop: 0 }, 200);
@@ -335,7 +344,7 @@ appComponents.component('checkout', {
 	controller: 'checkoutCtrl'
 });
 appComponents.component('facebookCallback', {
-	template: '...',
+	template: 'Handling facebook callback',
 	controller: 'facebookCallbackCtrl'
 });
 appComponents.component('flights', {
@@ -454,9 +463,15 @@ appControllers.controller('checkoutCtrl', ['$scope', '$rootScope', '$state', 'bo
 		//State Change Command	
 	}
 ]);
-appControllers.controller('facebookCallbackCtrl', [
-    function () {
+appControllers.controller('facebookCallbackCtrl', ['$scope', '$rootScope', '$state', '$stateParams', 'authService',
+    function ($scope, $rootScope, $state, $stateParams, authService) {
 
+        var fbCode = $stateParams.code;
+        authService.loginFacebook(fbCode, (err, result) => {
+            if (err) return console.error(err);
+            $rootScope.refreshLoginState();
+            $state.go('main');
+        });
     }
 ]);
 appControllers.controller('flightsCtrl', ['$scope', '$state', 'flightsService', 'locationsService', 'travelClassesService', 'bookingService',
@@ -664,17 +679,20 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
     function ($scope, $rootScope, $state, authService) {
 
         $scope.isAuthenticated = authService.isAuthenticated();
-        var refreshLoginState = function () {
-            if ($scope.isAuthenticated) {
-                authService.getAccount((err, result) => {
-                    if (err) return console.error(err);
+        $rootScope.refreshLoginState = function () {
+            authService.getAccount((err, result) => {
+                if (err) return console.error(err);
+                
+                $scope.isAuthenticated = authService.isAuthenticated();
+                if ($scope.isAuthenticated) {
+                    console.log('Refresh Login State');
                     $scope.username = result.account.email;
-                    $scope.$apply();
-                })
-            }
+                    $rootScope.$apply();
+                }
+            })
         };
 
-        refreshLoginState();
+        $rootScope.refreshLoginState();
 
 
         // Preauth
@@ -685,7 +703,7 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
             authService.loginLocal($scope.email, $scope.password, (err, token) => {
                 if (err) return console.log(err);
                 $scope.isAuthenticated = true;
-                refreshLoginState();
+                $rootScope.refreshLoginState();
                 $state.go('main');
             })
         }
@@ -704,7 +722,7 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
             authService.logout((err) => {
                 if (err) return console.error(err);
                 $scope.isAuthenticated = false;
-                refreshLoginState();
+                $rootScope.refreshLoginState();
                 $state.go('home');
             });
         }
@@ -790,22 +808,30 @@ appControllers.controller('passengersCtrl', ['$scope', '$state', 'bookingService
 		};			
 	}
 ]);
-appControllers.controller('registerCtrl', ["$scope", 
-    function($scope) {
+appControllers.controller('registerCtrl', [ '$scope', '$rootScope', '$state', 'authService',
+    function ($scope, $rootScope, $state, authService) {
         $scope.firstName = '';
         $scope.lastName = '';
         $scope.gender = '';
         $scope.email = '';
         $scope.password = '';
+
+        console.log($scope.firstName);
+        console.log($scope.password);
         $scope.signUp = function () {
-            $.ajax("http://127.0.0.1:1337/api/auth/register",{
-            method: "POST",
-            data: {
-                name: $scope.firstName + ' ' + $scope.lastName,
-                email: $scope.email,
-                password: $scope.password
-            },
-        })
+            authService.register(
+                $scope.firstName + ' ' + $scope.lastName,
+                $scope.email,
+                $scope.password,
+                (err, response) => {
+                    if (err) return console.error(err);
+                    console.log('DKY THANH CONG', response);
+                    authService.loginLocal($scope.email, $scope.password, (err, token) => {
+                        if (err) return console.error(err);
+                        $rootScope.refreshLoginState();
+                        $state.go('main');
+                    });
+                });
         }
     }
 ]);
@@ -1189,13 +1215,13 @@ appServices.factory('authService', [
                     })
                     .catch((xhr, textStatus, errorThrown) => callback(xhr.responseJSON));
             },
-            loginFacebook: function(done) {
+            loginFacebook: function(code, callback) {
 
                  var promise = new Promise((fulfill, reject) => {
                     $.ajax({
-                        url: '/api/auth/facebook',
-                        headers: { 'Access-Control-Allow-Headers': '*' },
+                        url: '/api/auth/facebook/callback',
                         method: 'GET',
+                        data: { code: code },
                         success: fulfill,
                         error: reject
                     });
@@ -1204,7 +1230,6 @@ appServices.factory('authService', [
                 promise
                     .then((result) => {
                         localStorage.setItem("token", result.token);
-                        console.log("DMM", result);
                         callback(null, result)
                     })
                     .catch((xhr, textStatus, errorThrown) => callback(xhr.responseJSON));
@@ -1232,6 +1257,25 @@ appServices.factory('authService', [
                 promise
                     .then((result) => done(null, result))
                     .catch((xhr, textStatus, errorThrown) => done(xhr.responseJSON));
+            },
+            register: function(name, email, password, done) {
+                var promise = new Promise((fulfill, reject) => {
+                    $.ajax({
+                        url: 'api/auth/register',
+                        method: 'POST',
+                        data: {
+                            name: name,
+                            email: email,
+                            password: password
+                        },
+                        success: fulfill,
+                        error: reject
+                    });
+            });
+
+            promise
+                .then((response) => done(null, response))
+                .catch((xhr, textStatus, errorThrown) => done(xhr.responseJSON));
             }
         };
 

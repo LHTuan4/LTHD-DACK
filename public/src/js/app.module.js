@@ -2,19 +2,21 @@ var app = angular.module('app', ['ui.router', 'ngAnimate', 'ngSanitize', 'appCom
 
 app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
   function($stateProvider, $urlRouterProvider, $locationProvider) {
-// $locationProvider.html5Mode({enabled: true, requireBase: false});
-
+    
+    
+    $locationProvider.html5Mode({enabled: true});
     $urlRouterProvider.otherwise('/');
-    $urlRouterProvider.when('/main', '/main/search');
-    $urlRouterProvider.when('/main/booking', '/main/booking/flights');
 
     // An array of state definitions
     var states = [
-      // {
-      //   name: 'facebookcb',
-      //   url: '/api/auth/facebook/callback?code',
-      //   component: 'facebookCallback'
-      // },
+      {
+        name: 'facebookcb',
+        url: '/facebook/callback?code',
+        component: 'facebookCallback',
+        params: {
+          code: null
+        }
+      },
       {
         name: 'home',
         url: '/',
@@ -33,19 +35,20 @@ app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
       },
 
       {
-        name: 'main.review',
-        url: '/review',
-        component: 'review'
-      },
-      
-      {
         name: 'main',
         component: 'main',
         url: '/main',
+        defaultSubstate: 'main.search',
         resolve: {
           'originsData': (locationsService) => locationsService.getOriginsPromise(),
           'destinationsData': (locationsService) => locationsService.getDestinationsPromise()
         }
+      },
+
+      {
+        name: 'main.review',
+        url: '/review',
+        component: 'review'
       },
 
       {
@@ -61,6 +64,7 @@ app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
         name: 'main.booking',
         component: 'booking',
         url: '/booking',
+        defaultSubstate: 'main.booking.flights',
         resolve: {
           'forwardRouteData': (flightsService) => flightsService.getForwardRoutePromise(),
           'returnRouteData': (flightsService) => flightsService.getReturnRoutePromise(),
@@ -129,11 +133,16 @@ app.run(['$rootScope', '$transitions',
     //   console.log('urlParams', urlParams);
     // })
 
+    $transitions.onBefore({ to: (state) => state.defaultSubstate != null }, (trans) => {
+      var substate = trans.to().defaultSubstate;
+      return trans.router.stateService.target(substate);
+    });
+
     $transitions.onStart({}, () => {
       console.log('loading data...');
       $rootScope.loading = true;
     });
-    $transitions.onSuccess({}, () => {
+    $transitions.onSuccess({ to: (s) => s.name !== 'facebookcb'}, () => {
       console.log('loading success');
       $rootScope.loading = false;
       $("html, body").animate({ scrollTop: 0 }, 200);

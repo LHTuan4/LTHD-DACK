@@ -24,6 +24,7 @@ var accountSchema = mongoose.Schema({
         type: String,
         unique: true,
         index: true
+        // optional: true
     }
 },
 //Schema optioms

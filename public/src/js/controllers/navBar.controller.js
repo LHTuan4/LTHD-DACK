@@ -2,17 +2,20 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
     function ($scope, $rootScope, $state, authService) {
 
         $scope.isAuthenticated = authService.isAuthenticated();
-        var refreshLoginState = function () {
-            if ($scope.isAuthenticated) {
-                authService.getAccount((err, result) => {
-                    if (err) return console.error(err);
+        $rootScope.refreshLoginState = function () {
+            authService.getAccount((err, result) => {
+                if (err) return console.error(err);
+                
+                $scope.isAuthenticated = authService.isAuthenticated();
+                if ($scope.isAuthenticated) {
+                    console.log('Refresh Login State');
                     $scope.username = result.account.email;
-                    $scope.$apply();
-                })
-            }
+                    $rootScope.$apply();
+                }
+            })
         };
 
-        refreshLoginState();
+        $rootScope.refreshLoginState();
 
 
         // Preauth
@@ -23,7 +26,7 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
             authService.loginLocal($scope.email, $scope.password, (err, token) => {
                 if (err) return console.log(err);
                 $scope.isAuthenticated = true;
-                refreshLoginState();
+                $rootScope.refreshLoginState();
                 $state.go('main');
             })
         }
@@ -42,7 +45,7 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
             authService.logout((err) => {
                 if (err) return console.error(err);
                 $scope.isAuthenticated = false;
-                refreshLoginState();
+                $rootScope.refreshLoginState();
                 $state.go('home');
             });
         }

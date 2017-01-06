@@ -1,4 +1,4 @@
 appComponents.component('facebookCallback', {
-	template: '...',
+	template: 'Handling facebook callback',
 	controller: 'facebookCallbackCtrl'
 });

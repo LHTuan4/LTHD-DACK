@@ -180,7 +180,8 @@ bookingsRouter.post('/',
 	
 });
 
-bookingsRouter.get('/:id', function(req, res, next) {
+bookingsRouter.get('/:id', 
+	function(req, res, next) {
 
 	var id;
 

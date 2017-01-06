@@ -19,7 +19,6 @@ authsRouter.get('/facebook/callback', function(req, res, next) {
         var token = jwt.sign({ _id: account._id }, auth.jwtConfigs.secretOrKey, { algorithm: auth.jwtConfigs.algorithms[0] });
         res.status(200).json({token: token});
    
-
   })(req, res, next);
 });
 
@@ -45,7 +44,7 @@ authsRouter.post('/register', function(req, res, next) {
     });
 
     acc.save((err) => {
-        if (err) next(err);
+        if (err) return next(err);
         res.status(200).json({id: acc._id});
     })
 });

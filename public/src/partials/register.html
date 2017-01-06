@@ -4,7 +4,7 @@
             <div class="panel panel-primary">
                 <div class="panel-heading">Thank you for Sign Up!</div>
                 <div class="panel-body">
-                    <form role="form" accept-charset="UTF-8">
+                    <form ng-submit="signUp()" accept-charset="UTF-8">
                     
                         <label for="fname">First Name</label>
                         <input  ng-model="firstName" type="text" id="fname" class="form-control" name="fname" placeholder="Example: John" required>
@@ -27,9 +27,9 @@
                         <input ng-model="password" type="password" id="password" class="form-control" name="password" placeholder="" required>
                         
                         <label for="verifypass" class="m-t-10">Verify Password</label>
-                        <input type="password" id="confirmpass" class="form-control" name="verifypass" placeholder="" required>
+                        <input ng-model="verpassword" type="password" id="confirmpass" class="form-control" name="verifypass" placeholder="" required>
                         <ul></ul>
-                        <center><input ng-click="signUp()" type="submit" class="btn btn-primary m-t-10" id="submitbtn"></center>
+                        <center><input type="submit" class="btn btn-primary m-t-10" id="submitbtn"></center>
                         
                     </form>
                 </div>

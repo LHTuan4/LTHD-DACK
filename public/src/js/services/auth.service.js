@@ -24,13 +24,13 @@ appServices.factory('authService', [
                     })
                     .catch((xhr, textStatus, errorThrown) => callback(xhr.responseJSON));
             },
-            loginFacebook: function(done) {
+            loginFacebook: function(code, callback) {
 
                  var promise = new Promise((fulfill, reject) => {
                     $.ajax({
-                        url: '/api/auth/facebook',
-                        headers: { 'Access-Control-Allow-Headers': '*' },
+                        url: '/api/auth/facebook/callback',
                         method: 'GET',
+                        data: { code: code },
                         success: fulfill,
                         error: reject
                     });
@@ -39,7 +39,6 @@ appServices.factory('authService', [
                 promise
                     .then((result) => {
                         localStorage.setItem("token", result.token);
-                        console.log("DMM", result);
                         callback(null, result)
                     })
                     .catch((xhr, textStatus, errorThrown) => callback(xhr.responseJSON));
@@ -67,6 +66,25 @@ appServices.factory('authService', [
                 promise
                     .then((result) => done(null, result))
                     .catch((xhr, textStatus, errorThrown) => done(xhr.responseJSON));
+            },
+            register: function(name, email, password, done) {
+                var promise = new Promise((fulfill, reject) => {
+                    $.ajax({
+                        url: 'api/auth/register',
+                        method: 'POST',
+                        data: {
+                            name: name,
+                            email: email,
+                            password: password
+                        },
+                        success: fulfill,
+                        error: reject
+                    });
+            });
+
+            promise
+                .then((response) => done(null, response))
+                .catch((xhr, textStatus, errorThrown) => done(xhr.responseJSON));
             }
         };
 
