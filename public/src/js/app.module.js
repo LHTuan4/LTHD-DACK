@@ -46,7 +46,7 @@ app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
       },
 
       {
-        name: 'main.review',
+        name: 'review',
         url: '/review',
         component: 'review',
         resolve: {

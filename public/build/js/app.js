@@ -46,9 +46,12 @@ app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
       },
 
       {
-        name: 'main.review',
+        name: 'review',
         url: '/review',
-        component: 'review'
+        component: 'review',
+        resolve: {
+          'longLoading': (testService) => testService.loadingPromise(300), //Test loading       
+        }
       },
 
       {
@@ -335,6 +338,53 @@ var Utils = {
 		return routeDescription;
 	}
 };
+appComponents.component('booking', {
+	templateUrl: '../partials/main/booking.html',
+	controller: 'bookingCtrl'
+});
+appComponents.component('checkout', {
+	templateUrl: '../partials/main/booking/checkout.html',
+	controller: 'checkoutCtrl'
+});
+appComponents.component('facebookCallback', {
+	template: 'Handling facebook callback',
+	controller: 'facebookCallbackCtrl'
+});
+appComponents.component('flights', {
+	templateUrl: '../partials/main/booking/flights.html',
+	controller: 'flightsCtrl'
+});
+appComponents.component('home', {
+	templateUrl: '../partials/home.html'
+});
+appComponents.component('main', {
+	templateUrl: '../partials/main.html',
+	controller: 'mainCtrl'
+});
+appComponents.component('navBar', {
+	templateUrl: '../partials/navBar.html',
+	controller: 'navBarCtrl'
+});
+appComponents.component('passengers', {
+	templateUrl: '../partials/main/booking/passengers.html',
+	controller: 'passengersCtrl'
+});
+appComponents.component('register', {
+	templateUrl: '../partials/register.html',
+	controller: 'registerCtrl'
+});
+appComponents.component('review', {
+	templateUrl: '../partials/review.html',
+	controller: 'reviewCtrl'
+});
+appComponents.component('search', {
+	templateUrl: '../partials/main/search.html',
+	controller: 'searchCtrl'
+});
+appComponents.component('summary', {
+	templateUrl: '../partials/main/booking/summary.html',
+	controller: 'summaryCtrl'
+});
 appControllers.controller('bookingCtrl', ['$scope', '$state', 'testService',
 	function($scope, $state, testService) {
 
@@ -688,6 +738,10 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
         };
         $scope.register = function () {
             $state.go('register');
+        };
+        $scope.searchReviewTb = '';
+        $scope.searchReview = function () {
+            $state.go('review');
         };
     }
 ]);
@@ -1904,50 +1958,3 @@ appServices.factory('validateService', [
 		return service;
 	}
 ]);
-appComponents.component('booking', {
-	templateUrl: '../partials/main/booking.html',
-	controller: 'bookingCtrl'
-});
-appComponents.component('checkout', {
-	templateUrl: '../partials/main/booking/checkout.html',
-	controller: 'checkoutCtrl'
-});
-appComponents.component('facebookCallback', {
-	template: 'Handling facebook callback',
-	controller: 'facebookCallbackCtrl'
-});
-appComponents.component('flights', {
-	templateUrl: '../partials/main/booking/flights.html',
-	controller: 'flightsCtrl'
-});
-appComponents.component('home', {
-	templateUrl: '../partials/home.html'
-});
-appComponents.component('main', {
-	templateUrl: '../partials/main.html',
-	controller: 'mainCtrl'
-});
-appComponents.component('navBar', {
-	templateUrl: '../partials/navBar.html',
-	controller: 'navBarCtrl'
-});
-appComponents.component('passengers', {
-	templateUrl: '../partials/main/booking/passengers.html',
-	controller: 'passengersCtrl'
-});
-appComponents.component('register', {
-	templateUrl: '../partials/register.html',
-	controller: 'registerCtrl'
-});
-appComponents.component('review', {
-	templateUrl: '../partials/review.html',
-	controller: 'reviewCtrl'
-});
-appComponents.component('search', {
-	templateUrl: '../partials/main/search.html',
-	controller: 'searchCtrl'
-});
-appComponents.component('summary', {
-	templateUrl: '../partials/main/booking/summary.html',
-	controller: 'summaryCtrl'
-});

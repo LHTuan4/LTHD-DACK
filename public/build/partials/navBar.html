@@ -2,19 +2,16 @@
       <div class="container-fluid">
           <!-- Brand and toggle get grouped for better mobile display -->
           <div class="navbar-header">
-              <a class="navbar-brand" href="#"> Home
-                 <!--<img src="/images/logo.png" width="30" height="30">-->
-              </a>
+              
           </div>
 
           <!-- Collect the nav links, forms, and other content for toggling -->
           <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             
               <form class="navbar-form navbar-left" role="search" ng-show="isAuthenticated">
-                  <div class="form-group">
-                      <input type="text" class="form-control" placeholder="Search your booking">
-                  </div>
-                  <button type="submit" class="btn btn-default">Submit</button>
+                 <button type="button" ng-click="searchReview()" class="btn btn-default" aria-label="Left Align">Review for your trip
+                    <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+                </button>
               </form>
 
               <!-- -->              

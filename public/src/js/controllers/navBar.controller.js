@@ -59,5 +59,9 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
         $scope.register = function () {
             $state.go('register');
         };
+        $scope.searchReviewTb = '';
+        $scope.searchReview = function () {
+            $state.go('review');
+        };
     }
 ]);
