@@ -1,4 +1,5 @@
 var express = require('express');
+var auth = Utils.getConfig('authentication');
 
 //------------------------------------------------------------------------
 //Endpoints
@@ -13,11 +14,11 @@ var authRouter = require('./endpoints/auth'),
 var apiRouter = express.Router();
 
 apiRouter.use('/auth', authRouter);
-apiRouter.use('/locations', locationsRouter);
-apiRouter.use('/passengers', passengersRouter);
-apiRouter.use('/travelclasses', travelClassesRouter);
-apiRouter.use('/flights', flightsRouter);
-apiRouter.use('/bookings', bookingsRouter);
+apiRouter.use('/locations', auth.checkToken, locationsRouter);
+apiRouter.use('/passengers', auth.checkToken, passengersRouter);
+apiRouter.use('/travelclasses', auth.checkToken, travelClassesRouter);
+apiRouter.use('/flights', auth.checkToken, flightsRouter);
+apiRouter.use('/bookings', auth.checkToken, bookingsRouter);
 
 //------------------------------------------------------------------------
 module.exports = apiRouter;

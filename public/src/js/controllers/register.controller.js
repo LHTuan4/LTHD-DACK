@@ -14,7 +14,11 @@ appControllers.controller('registerCtrl', [ '$scope', '$rootScope', '$state', 'a
                 $scope.email,
                 $scope.password,
                 (err, response) => {
-                    if (err) return console.error(err);
+                    if (err) {
+                        console.log('Failed register:', err);
+                        window.alert('Dang ky that bai:', err);
+                        return;
+                    }
                     console.log('DKY THANH CONG', response);
                     authService.loginLocal($scope.email, $scope.password, (err, token) => {
                         if (err) return console.error(err);

@@ -335,53 +335,6 @@ var Utils = {
 		return routeDescription;
 	}
 };
-appComponents.component('booking', {
-	templateUrl: '../partials/main/booking.html',
-	controller: 'bookingCtrl'
-});
-appComponents.component('checkout', {
-	templateUrl: '../partials/main/booking/checkout.html',
-	controller: 'checkoutCtrl'
-});
-appComponents.component('facebookCallback', {
-	template: 'Handling facebook callback',
-	controller: 'facebookCallbackCtrl'
-});
-appComponents.component('flights', {
-	templateUrl: '../partials/main/booking/flights.html',
-	controller: 'flightsCtrl'
-});
-appComponents.component('home', {
-	templateUrl: '../partials/home.html'
-});
-appComponents.component('main', {
-	templateUrl: '../partials/main.html',
-	controller: 'mainCtrl'
-});
-appComponents.component('navBar', {
-	templateUrl: '../partials/navBar.html',
-	controller: 'navBarCtrl'
-});
-appComponents.component('passengers', {
-	templateUrl: '../partials/main/booking/passengers.html',
-	controller: 'passengersCtrl'
-});
-appComponents.component('register', {
-	templateUrl: '../partials/register.html',
-	controller: 'registerCtrl'
-});
-appComponents.component('review', {
-	templateUrl: '../partials/review.html',
-	controller: 'reviewCtrl'
-});
-appComponents.component('search', {
-	templateUrl: '../partials/main/search.html',
-	controller: 'searchCtrl'
-});
-appComponents.component('summary', {
-	templateUrl: '../partials/main/booking/summary.html',
-	controller: 'summaryCtrl'
-});
 appControllers.controller('bookingCtrl', ['$scope', '$state', 'testService',
 	function($scope, $state, testService) {
 
@@ -681,7 +634,10 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
         $scope.isAuthenticated = authService.isAuthenticated();
         $rootScope.refreshLoginState = function () {
             authService.getAccount((err, result) => {
-                if (err) return console.error(err);
+                if (err) {
+                    console.log('Failed login:', err);
+                    return;
+                }
                 
                 $scope.isAuthenticated = authService.isAuthenticated();
                 if ($scope.isAuthenticated) {
@@ -689,7 +645,7 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
                     $scope.username = result.account.email;
                     $rootScope.$apply();
                 }
-            })
+            });
         };
 
         $rootScope.refreshLoginState();
@@ -701,12 +657,16 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
 
         $scope.loginLocal = function () {
             authService.loginLocal($scope.email, $scope.password, (err, token) => {
-                if (err) return console.log(err);
+                if (err) {
+                    console.log('Fail login:', err);
+                    window.alert('Dang nhap that bai');
+                    return;
+                }
                 $scope.isAuthenticated = true;
                 $rootScope.refreshLoginState();
                 $state.go('main');
-            })
-        }
+            });
+        };
 
         // $scope.loginFacebook = function() {
         //     authService.loginFacebook((err, token) => {
@@ -725,10 +685,10 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
                 $rootScope.refreshLoginState();
                 $state.go('home');
             });
-        }
+        };
         $scope.register = function () {
             $state.go('register');
-        }
+        };
     }
 ]);
 appControllers.controller('passengersCtrl', ['$scope', '$state', 'bookingService',
@@ -824,7 +784,11 @@ appControllers.controller('registerCtrl', [ '$scope', '$rootScope', '$state', 'a
                 $scope.email,
                 $scope.password,
                 (err, response) => {
-                    if (err) return console.error(err);
+                    if (err) {
+                        console.log('Failed register:', err);
+                        window.alert('Dang ky that bai:', err);
+                        return;
+                    }
                     console.log('DKY THANH CONG', response);
                     authService.loginLocal($scope.email, $scope.password, (err, token) => {
                         if (err) return console.error(err);
@@ -1282,8 +1246,8 @@ appServices.factory('authService', [
         return serviceObj;
     }
 ]);
-appServices.factory('bookingService', ['validateService',
-	function(validateService) {
+appServices.factory('bookingService', ['validateService', 'authService',
+	function(validateService, authService) {
 
 		var reviewingBookingId = null;
 		var config = {
@@ -1443,11 +1407,14 @@ appServices.factory('bookingService', ['validateService',
 			getBooking: function(id, callback) {
 
 				reviewingBookingId = id;
+				var token = localStorage.getItem("token");
+				if (!token) return callback('Unauthencation');
 
 				var promise = new Promise((fulfill, reject) => {
 					$.ajax({
 						url: '/api/bookings/' + reviewingBookingId,
-						method: 'GET',
+						headers: { access_token: token },
+						method: 'GET',				
 						success: fulfill,
 						error: reject
 					});
@@ -1486,9 +1453,13 @@ appServices.factory('bookingService', ['validateService',
 						};
 				}
 				console.log(requestBody);
+				var token = localStorage.getItem("token");
+				if (!token) return callback('Unauthencation');
+				
 				var promise = new Promise((fulfill, reject) => {
 					$.ajax({
 						url: '/api/bookings',
+						headers: { access_token: token },
 						method: 'POST',
 						contentType: 'application/json',
 						data: JSON.stringify(requestBody),
@@ -1506,7 +1477,7 @@ appServices.factory('bookingService', ['validateService',
 		return service;
 	}
 ]);
-appServices.factory('flightsService', [
+appServices.factory('flightsService', ['authService',
 	function() {
 
 		var query = {
@@ -1532,8 +1503,12 @@ appServices.factory('flightsService', [
 		};
 
 		var forwardRoutePromiseParams = function(fullfill, reject) {
+			var token = localStorage.getItem("token");
+			if (!token) return callback('Unauthencation');
+				
 			$.ajax({
 				url: '/api/flights',
+				headers: { access_token: token },
 				method: 'GET',
 				data: getForwardRouteQuery(),
 				success: fullfill,
@@ -1555,8 +1530,11 @@ appServices.factory('flightsService', [
 		};
 
 		var returnRoutePromiseParams = function(fullfill, reject) {
+			var token = localStorage.getItem("token");
+			if (!token) return callback('Unauthencation');
 			$.ajax({
 				url: '/api/flights',
+				headers: { access_token: token },
 				method: 'GET',
 				data: getReturnRouteQuery(),
 				success: fullfill,
@@ -1630,7 +1608,7 @@ appServices.factory('flightsService', [
 		return service;
 	}
 ]);
-appServices.factory('locationsService', [
+appServices.factory('locationsService', ['authService',
 	function() {
 
 		var query = {
@@ -1651,8 +1629,12 @@ appServices.factory('locationsService', [
 		};
 
 		var originsPromiseParams = function(fullfill, reject) {	
+			var token = localStorage.getItem("token");
+			if (!token) return callback('Unauthencation');
+
 			$.ajax({
 				url: '/api/locations/origins',
+				headers: { access_token: token },
 				method: 'GET',
 				data: getOriginsQuery(),
 				success: fullfill,
@@ -1672,8 +1654,11 @@ appServices.factory('locationsService', [
 		};
 
 		var destinationsPromiseParams = function(fullfill, reject) {
+			var token = localStorage.getItem("token");
+			if (!token) return callback('Unauthencation');
 			$.ajax({
 				url: '/api/locations/destinations',
+				headers: { access_token: token },
 				method: 'GET',
 				data: getDestinationsQuery(),
 				success: fullfill,
@@ -1771,8 +1756,8 @@ appServices.factory('testService', [
 		return serviceObj;
 	}
 ]);
-appServices.factory('travelClassesService', [
-	function() {
+appServices.factory('travelClassesService', ['authService',
+	function(authService) {
 
 		var query = {};
 		var travelClasses = null;
@@ -1786,8 +1771,11 @@ appServices.factory('travelClassesService', [
 		};
 
 		var travelClassesPromiseParams = function(fullfill, reject) {	
+			var token = localStorage.getItem("token");
+			if (!token) return callback('Unauthencation');
 			$.ajax({
 				url: '/api/travelclasses',
+				headers: { access_token: token },
 				method: 'GET',
 				data: getTravelClassesQuery(),
 				success: fullfill,
@@ -1916,3 +1904,50 @@ appServices.factory('validateService', [
 		return service;
 	}
 ]);
+appComponents.component('booking', {
+	templateUrl: '../partials/main/booking.html',
+	controller: 'bookingCtrl'
+});
+appComponents.component('checkout', {
+	templateUrl: '../partials/main/booking/checkout.html',
+	controller: 'checkoutCtrl'
+});
+appComponents.component('facebookCallback', {
+	template: 'Handling facebook callback',
+	controller: 'facebookCallbackCtrl'
+});
+appComponents.component('flights', {
+	templateUrl: '../partials/main/booking/flights.html',
+	controller: 'flightsCtrl'
+});
+appComponents.component('home', {
+	templateUrl: '../partials/home.html'
+});
+appComponents.component('main', {
+	templateUrl: '../partials/main.html',
+	controller: 'mainCtrl'
+});
+appComponents.component('navBar', {
+	templateUrl: '../partials/navBar.html',
+	controller: 'navBarCtrl'
+});
+appComponents.component('passengers', {
+	templateUrl: '../partials/main/booking/passengers.html',
+	controller: 'passengersCtrl'
+});
+appComponents.component('register', {
+	templateUrl: '../partials/register.html',
+	controller: 'registerCtrl'
+});
+appComponents.component('review', {
+	templateUrl: '../partials/review.html',
+	controller: 'reviewCtrl'
+});
+appComponents.component('search', {
+	templateUrl: '../partials/main/search.html',
+	controller: 'searchCtrl'
+});
+appComponents.component('summary', {
+	templateUrl: '../partials/main/booking/summary.html',
+	controller: 'summaryCtrl'
+});

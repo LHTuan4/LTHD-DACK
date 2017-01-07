@@ -1,4 +1,4 @@
-appServices.factory('flightsService', [
+appServices.factory('flightsService', ['authService',
 	function() {
 
 		var query = {
@@ -24,8 +24,12 @@ appServices.factory('flightsService', [
 		};
 
 		var forwardRoutePromiseParams = function(fullfill, reject) {
+			var token = localStorage.getItem("token");
+			if (!token) return callback('Unauthencation');
+				
 			$.ajax({
 				url: '/api/flights',
+				headers: { access_token: token },
 				method: 'GET',
 				data: getForwardRouteQuery(),
 				success: fullfill,
@@ -47,8 +51,11 @@ appServices.factory('flightsService', [
 		};
 
 		var returnRoutePromiseParams = function(fullfill, reject) {
+			var token = localStorage.getItem("token");
+			if (!token) return callback('Unauthencation');
 			$.ajax({
 				url: '/api/flights',
+				headers: { access_token: token },
 				method: 'GET',
 				data: getReturnRouteQuery(),
 				success: fullfill,

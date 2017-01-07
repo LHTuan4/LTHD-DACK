@@ -4,7 +4,10 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
         $scope.isAuthenticated = authService.isAuthenticated();
         $rootScope.refreshLoginState = function () {
             authService.getAccount((err, result) => {
-                if (err) return console.error(err);
+                if (err) {
+                    console.log('Failed login:', err);
+                    return;
+                }
                 
                 $scope.isAuthenticated = authService.isAuthenticated();
                 if ($scope.isAuthenticated) {
@@ -12,7 +15,7 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
                     $scope.username = result.account.email;
                     $rootScope.$apply();
                 }
-            })
+            });
         };
 
         $rootScope.refreshLoginState();
@@ -24,12 +27,16 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
 
         $scope.loginLocal = function () {
             authService.loginLocal($scope.email, $scope.password, (err, token) => {
-                if (err) return console.log(err);
+                if (err) {
+                    console.log('Fail login:', err);
+                    window.alert('Dang nhap that bai');
+                    return;
+                }
                 $scope.isAuthenticated = true;
                 $rootScope.refreshLoginState();
                 $state.go('main');
-            })
-        }
+            });
+        };
 
         // $scope.loginFacebook = function() {
         //     authService.loginFacebook((err, token) => {
@@ -48,9 +55,9 @@ appControllers.controller('navBarCtrl', ['$scope', '$rootScope', '$state', 'auth
                 $rootScope.refreshLoginState();
                 $state.go('home');
             });
-        }
+        };
         $scope.register = function () {
             $state.go('register');
-        }
+        };
     }
 ]);

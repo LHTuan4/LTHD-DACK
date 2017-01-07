@@ -1,4 +1,4 @@
-appServices.factory('locationsService', [
+appServices.factory('locationsService', ['authService',
 	function() {
 
 		var query = {
@@ -19,8 +19,12 @@ appServices.factory('locationsService', [
 		};
 
 		var originsPromiseParams = function(fullfill, reject) {	
+			var token = localStorage.getItem("token");
+			if (!token) return callback('Unauthencation');
+
 			$.ajax({
 				url: '/api/locations/origins',
+				headers: { access_token: token },
 				method: 'GET',
 				data: getOriginsQuery(),
 				success: fullfill,
@@ -40,8 +44,11 @@ appServices.factory('locationsService', [
 		};
 
 		var destinationsPromiseParams = function(fullfill, reject) {
+			var token = localStorage.getItem("token");
+			if (!token) return callback('Unauthencation');
 			$.ajax({
 				url: '/api/locations/destinations',
+				headers: { access_token: token },
 				method: 'GET',
 				data: getDestinationsQuery(),
 				success: fullfill,

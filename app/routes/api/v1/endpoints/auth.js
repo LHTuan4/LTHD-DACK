@@ -14,7 +14,7 @@ authsRouter.get('/facebook', passport.authenticate('facebook', { scope: ['email'
 authsRouter.get('/facebook/callback', function(req, res, next) {
 	passport.authenticate('facebook', function(err, account, info) {
         if (err) return next(err);
-        if (!account) return res.end('facebook fail');
+        if (!account) return res.status(401).json({message: 'facebook fail'});
         
         var token = jwt.sign({ _id: account._id }, auth.jwtConfigs.secretOrKey, { algorithm: auth.jwtConfigs.algorithms[0] });
         res.status(200).json({token: token});
@@ -25,9 +25,9 @@ authsRouter.get('/facebook/callback', function(req, res, next) {
 
 //====================================================================
 authsRouter.get('/local', function(req, res, next) {
-    passport.authenticate('local', function(err, account, message) {
+    passport.authenticate('local', function(err, account, info) {
         if (err) return next(err);
-        if (!account) return res.end(message);
+        if (!account) return res.status(401).json({message: info});
         
         var token = jwt.sign({ _id: account._id }, auth.jwtConfigs.secretOrKey, { algorithm: auth.jwtConfigs.algorithms[0] });
         res.status(200).json({token: token});
@@ -55,7 +55,7 @@ authsRouter.get('/self', (req, res, next) => {
         
         if (err) return next(err);
         if (info instanceof Error)
-            return res.status(403).json({error: info.message});
+            return res.status(401).json({error: info.message});
         
         var rawAccount = account.toObject();
         delete rawAccount.passwordHash;

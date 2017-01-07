@@ -48,7 +48,10 @@ app.config(['$stateProvider', '$urlRouterProvider', '$locationProvider',
       {
         name: 'main.review',
         url: '/review',
-        component: 'review'
+        component: 'review',
+        resolve: {
+          'longLoading': (testService) => testService.loadingPromise(300), //Test loading       
+        }
       },
 
       {

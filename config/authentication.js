@@ -13,15 +13,14 @@ passport.use('facebook', new FacebookStrategy({
   function(accessToken, refreshToken, profile, cb) {
     console.log(profile);
     Account
-        .findOne({facebookId: profile.id})
+        .findOne({email: profile.emails[0].value})
         .exec((err, account) => {
             if (err) return cb(err);
             if (!account) {
 
                 var acc = new Account({
                     name: profile.name.givenName,
-                    email: profile.emails[0].value,
-                    facebookId: profile.id
+                    email: profile.emails[0].value
                 });
             
                 acc.save((err) => {
@@ -73,11 +72,22 @@ passport.use('jwt', new JwtStrategy(
             .findById(jwt_payload._id)
             .exec((err, account) => {
                 if (err) return done(err);
-                if (!account) return done(null, false);
+                if (!account) return done(null, false, 'Failed authentication');
                 done(null, account);
             });
 }));
 
 module.exports = {
-    jwtConfigs: jwtConfigs
+    jwtConfigs: jwtConfigs,
+    checkToken: function(req, res, next) {
+        passport.authenticate('jwt', (err, account, info) => {
+            if (err) return next(err);
+            if (!account) {
+                return res.status(401).json({message: info});
+            }
+
+            req.account = account;
+            next();
+        })(req, res, next);
+    }
 }

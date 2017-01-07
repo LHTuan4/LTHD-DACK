@@ -9,23 +9,9 @@ var bcrypt = require('bcryptjs');
 // Schema definition
 var accountSchema = mongoose.Schema({
 
-    name: {
-        type: String
-    },
-    email: {
-        type: String,
-        unique: true,
-        index: true
-    },
-    passwordHash: {
-        type: String
-    },
-    facebookId: {
-        type: String,
-        unique: true,
-        index: true
-        // optional: true
-    }
+    name: { type: String },
+    email: { type: String, unique: true, index: true },
+    passwordHash: { type: String }
 },
 //Schema optioms
 {timestamps: true});

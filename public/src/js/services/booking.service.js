@@ -1,5 +1,5 @@
-appServices.factory('bookingService', ['validateService',
-	function(validateService) {
+appServices.factory('bookingService', ['validateService', 'authService',
+	function(validateService, authService) {
 
 		var reviewingBookingId = null;
 		var config = {
@@ -159,11 +159,14 @@ appServices.factory('bookingService', ['validateService',
 			getBooking: function(id, callback) {
 
 				reviewingBookingId = id;
+				var token = localStorage.getItem("token");
+				if (!token) return callback('Unauthencation');
 
 				var promise = new Promise((fulfill, reject) => {
 					$.ajax({
 						url: '/api/bookings/' + reviewingBookingId,
-						method: 'GET',
+						headers: { access_token: token },
+						method: 'GET',				
 						success: fulfill,
 						error: reject
 					});
@@ -202,9 +205,13 @@ appServices.factory('bookingService', ['validateService',
 						};
 				}
 				console.log(requestBody);
+				var token = localStorage.getItem("token");
+				if (!token) return callback('Unauthencation');
+				
 				var promise = new Promise((fulfill, reject) => {
 					$.ajax({
 						url: '/api/bookings',
+						headers: { access_token: token },
 						method: 'POST',
 						contentType: 'application/json',
 						data: JSON.stringify(requestBody),

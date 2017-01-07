@@ -1,5 +1,5 @@
-appServices.factory('travelClassesService', [
-	function() {
+appServices.factory('travelClassesService', ['authService',
+	function(authService) {
 
 		var query = {};
 		var travelClasses = null;
@@ -13,8 +13,11 @@ appServices.factory('travelClassesService', [
 		};
 
 		var travelClassesPromiseParams = function(fullfill, reject) {	
+			var token = localStorage.getItem("token");
+			if (!token) return callback('Unauthencation');
 			$.ajax({
 				url: '/api/travelclasses',
+				headers: { access_token: token },
 				method: 'GET',
 				data: getTravelClassesQuery(),
 				success: fullfill,
