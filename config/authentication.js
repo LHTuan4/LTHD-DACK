@@ -7,7 +7,7 @@ var Account = Utils.getModel('Account').Model;
 passport.use('facebook', new FacebookStrategy({
     clientID: '1891628951058910',
     clientSecret: 'bb29ae226aad14d8c4a9c95e969039f5',
-    callbackURL: "http://localhost:1337/facebook/callback",
+    callbackURL: "https://desolate-coast-28477.herokuapp.com/facebook/callback",
     profileFields: ['id', 'email', 'name']
   },
   function(accessToken, refreshToken, profile, cb) {
